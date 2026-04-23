@@ -1,11 +1,11 @@
 --[[
     ■■■■■ ActionLists
-    ■   ■ Author: @sh1zok_was_here
+    ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/ActionLists
     ■■■■  v1.5.0
 
 MIT License
 
-Copyright (c) 2025 Sh1zok
+Copyright (c) 2026 Sh1zok
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
