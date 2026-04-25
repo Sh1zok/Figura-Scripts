@@ -1,3 +1,5 @@
 - [ ] Intro and Outro
 - [ ] Smoooth and controllable blending between animations
 - [ ] Animation Tags
+- [ ] Opacity animation keyframes
+- [ ] Color animation keyframes
