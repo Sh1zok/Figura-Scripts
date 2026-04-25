@@ -3,3 +3,6 @@ This is a repository with my scripts for [Figura](https://github.com/FiguraMC/Fi
 
 # License
 All my public Figura scripts are licensed under the [MIT License](https://github.com/Sh1zok/Figura-Scripts/blob/main/LICENSE). This means you can use/copy/modify/sell them as part of your Figura avatars, etc.
+
+# Wiki(s)
+All my public scripts come with [wiki documentation](https://github.com/Sh1zok/Figura-Scripts/wiki).
