@@ -19,4 +19,4 @@ The process of installing the script is quite simple
 3. Initialize Smoothie and store it in a variable.
 
 > [!TIP]
-> Before using it, explore the features using [This Library Wiki](https://github.com/Sh1zok/Figura-Smoothie/wiki)
+> Before using it, explore the features using [This Library Wiki](https://github.com/Sh1zok/Figura-Scripts/wiki/%5BSmoothie%5D-Home)
