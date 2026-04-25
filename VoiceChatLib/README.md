@@ -17,4 +17,4 @@ The process of installing the script is quite simple
 3. Initialize the library via `avatar.json` file.
 
 > [!TIP]
-> Before using it, explore the features using [This Library Wiki](https://github.com/Sh1zok/FiguraSVC-VoiceChatLib/wiki)
+> Before using it, explore the features using [This Library Wiki](https://github.com/Sh1zok/Figura-Scripts/wiki/%5BVoiceChatLib%5D-Home)
