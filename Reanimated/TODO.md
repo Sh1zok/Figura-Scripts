@@ -3,3 +3,5 @@
 - [ ] Animation Tags
 - [ ] Opacity animation keyframes
 - [ ] Color animation keyframes
+- [ ] Make a way to get which animations affect a model part
+- [ ] getRot()/getPos()/getScale()
