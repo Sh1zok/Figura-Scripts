@@ -27,7 +27,7 @@ The process of installing the script is quite simple
 4. Done. Have fun!
 
 > [!TIP]
-> Before using it, explore the features using [This Script Wiki](https://github.com/Sh1zok/Figura-ActionsLists/wiki)
+> Before using it, explore the features using [This Script Wiki](https://github.com/Sh1zok/Figura-Scripts/wiki/%5BActionLists%5D-Home)
 
 > [!TIP]
 > There is also an example avatar in this repository. You can explore the script's features there.
