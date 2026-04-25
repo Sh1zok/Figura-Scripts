@@ -1,7 +1,7 @@
 --[[
     ■■■■■ Reanimated
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/Reanimated
-    ■■■■  v0.1.0
+    ■■■■  v0.2.0
 
 MIT License
 
@@ -719,6 +719,16 @@ end
 local modelpartOrgignalIndexMethod = figuraMetatables.ModelPart.__index -- Save the original __index method for future use
 local modelPartCustoms = {} -- Custom elements and methods of every model part
 
+-- Function that arranges all priorities in ascending order
+local function arrangePriorities(prioritiesTable)
+    local priorities = {}
+    local priority = next(prioritiesTable)
+    while priority do priorities[#priorities + 1], priority = priority, next(prioritiesTable, priority) end
+    table.sort(priorities)
+
+    return priorities
+end
+
 -- Custom __index method of every model part
 --
 -- Looking for the customs first. If it finds something, it returns that
@@ -739,106 +749,94 @@ local parentTypesTable = {
     Cape = "CAPE_MODEL"
 }
 
--- A function that calculates the true rotation of a model part
+-- A function that calculates the pre-final rotation of a model part
 --
--- Takes the highest rotations priority and sums them to get the true model part rotation
+-- Takes the highest rotations priority and sums them to get the pre-final model part rotation
 function modelPartCustoms:updateRot()
-    -- Arranging all priorities in ascending order(#rotationPriorities is a highest priority)
-    local rotationPriorities = {}
-    local priority = next(modelPartTransforms[self].rotations)
-    while priority do rotationPriorities[#rotationPriorities + 1], priority = priority, next(modelPartTransforms[self].rotations, priority) end
-    table.sort(rotationPriorities)
+    local rotationPriorities = arrangePriorities(modelPartTransforms[self].rotations)
 
-    -- Calculating true rotation of the model part and determining whether the true rotation merges with the vanilla animations
-    local modelPartTrueRot = vec(0, 0, 0)
+    -- Calculating pre-final rotation of the model part and determining whether the pre-final rotation merges with the vanilla animations
+    local modelPartPreFinalRot = vec(0, 0, 0)
     local isMergable = true
     for _, data in pairs(modelPartTransforms[self].rotations[#rotationPriorities - 1]) do
         if not data.isMerging then isMergable = false end
-        modelPartTrueRot = modelPartTrueRot + data.vector
+        modelPartPreFinalRot = modelPartPreFinalRot + data.vector
     end
 
-    -- If the true rotation cannot be merged with the vanilla rotation, calculating and applying a counter rotation
+    -- If the pre-final rotation cannot be merged with the vanilla rotation, calculating and applying a counter rotation
     if not isMergable and parentTypesTable[self:getParentType()] then
         local counterRotation
         if parentTypesTable[self:getParentType()] then counterRotation = -vanilla_model[parentTypesTable[self:getParentType()]]:getOriginRot() end
-        modelPartTrueRot = modelPartTrueRot + counterRotation
+        modelPartPreFinalRot = modelPartPreFinalRot + counterRotation
     end
 
     -- NaN checks
-    if modelPartTrueRot[1] ~= modelPartTrueRot[1] then modelPartTrueRot[1] = 0 end -- x
-    if modelPartTrueRot[2] ~= modelPartTrueRot[2] then modelPartTrueRot[2] = 0 end -- y
-    if modelPartTrueRot[3] ~= modelPartTrueRot[3] then modelPartTrueRot[3] = 0 end -- z
+    if modelPartPreFinalRot[1] ~= modelPartPreFinalRot[1] then modelPartPreFinalRot[1] = 0 end -- x
+    if modelPartPreFinalRot[2] ~= modelPartPreFinalRot[2] then modelPartPreFinalRot[2] = 0 end -- y
+    if modelPartPreFinalRot[3] ~= modelPartPreFinalRot[3] then modelPartPreFinalRot[3] = 0 end -- z
 
-    -- Applying true rotation to the model part
-    return modelpartOrgignalIndexMethod(self, "setRot")(self, modelPartTrueRot)
+    -- Applying pre-final rotation to the model part
+    return modelpartOrgignalIndexMethod(self, "setRot")(self, modelPartPreFinalRot)
 end
 
--- A function that calculates the true position of a model part
+-- A function that calculates the pre-final position of a model part
 --
--- Takes the highest positions priority and sums them to get the true model part position
+-- Takes the highest positions priority and sums them to get the pre-final model part position
 function modelPartCustoms:updatePos()
-    -- Arranging all priorities in ascending order(#positionPriorities is a highest priority)
-    local positionPriorities = {}
-    local priority = next(modelPartTransforms[self].positions)
-    while priority do positionPriorities[#positionPriorities + 1], priority = priority, next(modelPartTransforms[self].positions, priority) end
-    table.sort(positionPriorities)
+    local positionPriorities = arrangePriorities(modelPartTransforms[self].positions)
 
-    -- Calculating true position of the model part and determining whether the true position merges with the vanilla animations
-    local modelPartTruePos = vec(0, 0, 0)
+    -- Calculating pre-final position of the model part and determining whether the pre-final position merges with the vanilla animations
+    local modelPartPreFinalPos = vec(0, 0, 0)
     local isMergable = true
     for _, data in pairs(modelPartTransforms[self].positions[#positionPriorities - 1]) do
         if not data.isMerging then isMergable = false end
-        modelPartTruePos = modelPartTruePos + data.vector
+        modelPartPreFinalPos = modelPartPreFinalPos + data.vector
     end
 
-    -- If the true position cannot be merged with the vanilla position, calculating and applying a counter position
+    -- If the pre-final position cannot be merged with the vanilla position, calculating and applying a counter position
     if not isMergable and parentTypesTable[self:getParentType()] then
         local counterPosition
         if parentTypesTable[self:getParentType()] then counterPosition = -vanilla_model[parentTypesTable[self:getParentType()]]:getOriginPos() end
-        modelPartTruePos = modelPartTruePos + counterPosition
+        modelPartPreFinalPos = modelPartPreFinalPos + counterPosition
     end
 
     -- NaN checks
-    if modelPartTruePos[1] ~= modelPartTruePos[1] then modelPartTruePos[1] = 0 end -- x
-    if modelPartTruePos[2] ~= modelPartTruePos[2] then modelPartTruePos[2] = 0 end -- y
-    if modelPartTruePos[3] ~= modelPartTruePos[3] then modelPartTruePos[3] = 0 end -- z
+    if modelPartPreFinalPos[1] ~= modelPartPreFinalPos[1] then modelPartPreFinalPos[1] = 0 end -- x
+    if modelPartPreFinalPos[2] ~= modelPartPreFinalPos[2] then modelPartPreFinalPos[2] = 0 end -- y
+    if modelPartPreFinalPos[3] ~= modelPartPreFinalPos[3] then modelPartPreFinalPos[3] = 0 end -- z
 
-    -- Applying true position to the model part
-    return modelpartOrgignalIndexMethod(self, "setPos")(self, modelPartTruePos)
+    -- Applying pre-final position to the model part
+    return modelpartOrgignalIndexMethod(self, "setPos")(self, modelPartPreFinalPos)
 end
 
--- A function that calculates the true scale of a model part
+-- A function that calculates the pre-final scale of a model part
 --
--- Takes the highest scales priority and sums them to get the true model part scale
+-- Takes the highest scales priority and sums them to get the pre-final model part scale
 function modelPartCustoms:updateScale()
-    -- Arranging all priorities in ascending order(#scalePriorities is a highest priority)
-    local scalePriorities = {}
-    local priority = next(modelPartTransforms[self].scales)
-    while priority do scalePriorities[#scalePriorities + 1], priority = priority, next(modelPartTransforms[self].scales, priority) end
-    table.sort(scalePriorities)
+    local scalePriorities = arrangePriorities(modelPartTransforms[self].scales)
 
-    -- Calculating true scale of the model part and determining whether the true scale merges with the vanilla animations
-    local modelPartTrueScale = vec(1, 1, 1)
+    -- Calculating pre-final scale of the model part and determining whether the pre-final scale merges with the vanilla animations
+    local modelPartPreFinalScale = vec(1, 1, 1)
     local isMergable = true
     for _, data in pairs(modelPartTransforms[self].scale[#scalePriorities - 1]) do
         if not data.isMerging then isMergable = false end
-        modelPartTrueScale = modelPartTrueScale + data.vector
+        modelPartPreFinalScale = modelPartPreFinalScale + data.vector
     end
 
-    -- If the true scale cannot be merged with the vanilla scale, calculating and applying a counter scale
+    -- If the pre-final scale cannot be merged with the vanilla scale, calculating and applying a counter scale
     if not isMergable and parentTypesTable[self:getParentType()] then
         local counterScale
         if parentTypesTable[self:getParentType()] then counterScale = -vanilla_model[parentTypesTable[self:getParentType()]]:getOriginScale() end
-        modelPartTrueScale = modelPartTrueScale + counterScale
+        modelPartPreFinalScale = modelPartPreFinalScale + counterScale
     end
 
     -- NaN checks
-    if modelPartTrueScale[1] ~= modelPartTrueScale[1] then modelPartTrueScale[1] = 1 end -- x
-    if modelPartTrueScale[2] ~= modelPartTrueScale[2] then modelPartTrueScale[2] = 1 end -- y
-    if modelPartTrueScale[3] ~= modelPartTrueScale[3] then modelPartTrueScale[3] = 1 end -- z
+    if modelPartPreFinalScale[1] ~= modelPartPreFinalScale[1] then modelPartPreFinalScale[1] = 1 end -- x
+    if modelPartPreFinalScale[2] ~= modelPartPreFinalScale[2] then modelPartPreFinalScale[2] = 1 end -- y
+    if modelPartPreFinalScale[3] ~= modelPartPreFinalScale[3] then modelPartPreFinalScale[3] = 1 end -- z
 
-    -- Applying true scale to the model part
-    return modelpartOrgignalIndexMethod(self, "setScale")(self, modelPartTrueScale)
+    -- Applying pre-final scale to the model part
+    return modelpartOrgignalIndexMethod(self, "setScale")(self, modelPartPreFinalScale)
 end
 
 -- Replacement of the original method for better control over the rotation setting
@@ -858,6 +856,9 @@ function modelPartCustoms:setRot(rotOrX, y, z)
     -- Setting the rotation
     return self:updateRot()
 end
+function modelPartCustoms:rot(rotOrX, y, z) return self:setRot(rotOrX, y, z) end -- Alias
+
+function modelPartCustoms:getRot() return modelPartTransforms[self].rotations[0].script end
 
 -- Replacement of the original method for better control over the position setting
 function modelPartCustoms:setPos(posOrX, y, z)
@@ -876,6 +877,9 @@ function modelPartCustoms:setPos(posOrX, y, z)
     -- Setting the position
     return self:updatePos()
 end
+function modelPartCustoms:pos(posOrX, y, z) return self:setPos(posOrX, y, z) end -- Alias
+
+function modelPartCustoms:getPos() return modelPartTransforms[self].positions[0].script end
 
 -- Replacement of the original method for better control over the scale setting
 function modelPartCustoms:setScale(scaleOrX, y, z)
@@ -893,4 +897,91 @@ function modelPartCustoms:setScale(scaleOrX, y, z)
 
     -- Setting the scale
     return self:updateScale()
+end
+function modelPartCustoms:scale(scaleOrX, y, z) return self:setScale(scaleOrX, y, z) end -- Alias
+
+function modelPartCustoms:getScale() return modelPartTransforms[self].scales[0].script end
+
+-- Replacement of the original method for more precise output
+function modelPartCustoms:getTrueRot()
+    self:updateRot()
+    return modelpartOrgignalIndexMethod(self, "getTrueRot")(self)
+end
+
+-- Replacement of the original method for more precise output
+function modelPartCustoms:getTruePos()
+    self:updatePos()
+    return modelpartOrgignalIndexMethod(self, "getTruePos")(self)
+end
+
+-- Replacement of the original method for more precise output
+function modelPartCustoms:getTrueScale()
+    self:updateScale()
+    return modelpartOrgignalIndexMethod(self, "getTrueScale")(self)
+end
+
+-- A Method that allows to get a list of all transformations applied to a model part
+function modelPartCustoms:getAllTransforms() return tableDeepCopy(modelPartTransforms[self]) end
+
+function modelPartCustoms:getAnimRot()
+    local rotationPriorities = arrangePriorities(modelPartTransforms[self].rotations)
+
+    -- Calculating pre-final rotation of the model part
+    local modelPartPreFinalRot = vec(0, 0, 0)
+    for _, data in pairs(modelPartTransforms[self].rotations[#rotationPriorities - 1]) do modelPartPreFinalRot = modelPartPreFinalRot + data.vector end
+
+    return modelPartPreFinalRot
+end
+
+function modelPartCustoms:getAnimPos()
+    local positionPriorities = arrangePriorities(modelPartTransforms[self].positions)
+
+    -- Calculating pre-final position of the model part
+    local modelPartPreFinalPos = vec(0, 0, 0)
+    for _, data in pairs(modelPartTransforms[self].positions[#positionPriorities - 1]) do modelPartPreFinalPos = modelPartPreFinalPos + data.vector end
+
+    return modelPartPreFinalPos
+end
+
+function modelPartCustoms:getAnimScale()
+    local scalePriorities = arrangePriorities(modelPartTransforms[self].scales)
+
+    -- Calculating pre-final scale of the model part
+    local modelPartPreFinalScale = vec(1, 1, 1)
+    for _, data in pairs(modelPartTransforms[self].scale[#scalePriorities - 1]) do modelPartPreFinalScale = modelPartPreFinalScale + data.vector end
+
+    return modelPartPreFinalScale
+end
+
+function modelPartCustoms:overrideVanillaRot()
+    local rotationPriorities = arrangePriorities(modelPartTransforms[self].rotations)
+
+    -- Determining whether the pre-final rotation merges with the vanilla animations
+    for _, data in pairs(modelPartTransforms[self].rotations[#rotationPriorities - 1]) do
+        if not data.isMerging then return false end
+    end
+
+    return true
+end
+
+function modelPartCustoms:overrideVanillaPos()
+    local positionPriorities = arrangePriorities(modelPartTransforms[self].positions)
+
+    -- Determining whether the pre-final position merges with the vanilla animations
+    for _, data in pairs(modelPartTransforms[self].positions[#positionPriorities - 1]) do
+        if not data.isMerging then return false end
+    end
+
+    return true
+end
+
+function modelPartCustoms:overrideVanillaScale()
+    local scalePriorities = arrangePriorities(modelPartTransforms[self].scales)
+
+    -- Determining whether the pre-final scale merges with the vanilla animations
+    for _, data in pairs(modelPartTransforms[self].scales[#scalePriorities - 1]) do
+        if not data.isMerging then return false end
+    end
+
+    return true
 end
