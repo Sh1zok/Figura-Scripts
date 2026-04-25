@@ -1,6 +1,9 @@
 # Figura-Smoothie
 For those who don't wanna violate the SquAPI license
 
+> [!CAUTION]
+> This script has been archived and is no longer maintained.
+
 This repository contains a *library* for Figura avatars. This library adds methods that are almost identical in functionality to [SquAPI](https://github.com/MrSirSquishy/SquishyAPI)
 
 ## Script purpose
