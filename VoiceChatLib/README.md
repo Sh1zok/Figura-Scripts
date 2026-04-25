@@ -1,6 +1,9 @@
 # VoiceChatLib
 Voice Chat Library - a script that makes working with [FiguraSVC](https://github.com/KnownSH/FiguraSVC) v2.0 easier
 
+> [!CAUTION]
+> This script has been archived and is no longer maintained.
+
 ## Library purpose:
 Although FiguraSVC is a very useful addon for the Figura mod, using it in its pure form is quite difficult.
 
