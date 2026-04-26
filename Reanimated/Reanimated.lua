@@ -1,7 +1,7 @@
 --[[
     ■■■■■ Reanimated
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/Reanimated
-    ■■■■  v0.2.0
+    ■■■■  v0.3.1
 
 MIT License
 
