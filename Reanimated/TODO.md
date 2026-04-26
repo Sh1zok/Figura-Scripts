@@ -1,6 +1,6 @@
 - [ ] Intro and Outro
 - [ ] Smoooth and controllable blending between animations
-- [ ] Animation Tags
+- [x] Animation Tags
 - [ ] Opacity animation keyframes
 - [ ] Color animation keyframes
 - [x] Make a way to get which animations affect a model part
