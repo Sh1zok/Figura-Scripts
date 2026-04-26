@@ -98,7 +98,7 @@ local function interpolateValues(previousKeyframe, currentKeyframe, targetKeyfra
         end
 
         return (timesMutiplied[1] * previousKeyframe.data.value + timesMutiplied[2] * currentKeyframe.data.value + timesMutiplied[3] * targetKeyframe.data.value + timesMutiplied[4] * nextTargetKeyframe.data.value) / 2
-    elseif currentKeyframe.data.interpolation.type == "BEZIER" then -- Bezier(damn math hell, hope I will never touch this again)
+    elseif currentKeyframe.data.interpolation.type == "BEZIER" then -- Bezier(damn math hell, I hope I will never touch this again)
         -- Point times and values
         local currentFrameTime = currentKeyframe.time
         local targetFrameTime = targetKeyframe.time
@@ -159,10 +159,10 @@ end
     in the future and also defines the functions of the new animation API
 ]]--
 
-local animationsList, newAnimationAPI = {models = {}}, {}
+local animationsList, newAnimationAPI = {models = {}}, {tags = {}}
 
--- An internal list for storing all transformations of all model parts.
--- Contains the __index metamethods for automatically creating missing parts of the list
+-- An internal table for storing all transformations of all model parts
+-- Contains the __index metamethods for automatically creating/findind missing parts of the table
 local modelPartTransforms = setmetatable({}, {
     __index = function(modelPartsTable, modelPart)
         modelPartsTable[modelPart] = setmetatable({}, {
@@ -176,11 +176,11 @@ local modelPartTransforms = setmetatable({}, {
     end
 })
 
-animations = setmetatable(newAnimationAPI, {__index = function(_, key) return animationsList[key] end}) -- Replaceing the original API 
+animations = setmetatable(newAnimationAPI, {__index = function(_, key) return animationsList[key] end}) -- Replaceing the original API
 
--- A function for creating a new animation. It accepts the name of the model to
--- which it will be attached and the animation preferences
-function newAnimationAPI:newAnimation(modelName, preferences)
+-- A function for creates a new animation. It accepts the name of the model to
+-- which it will be attached, animation preferences and animation tags
+function newAnimationAPI:newAnimation(modelName, preferences, tags)
     -- Assertation
     assert(type(modelName or "models") == "string", "Invalid argument 1 to function newAnimation. Expected string or nil, but got " .. type(modelName))
     assert(type(preferences) == "table", "Invalid argument 2 to function newAnimation. Expected table, but got " .. type(preferences))
@@ -192,6 +192,7 @@ function newAnimationAPI:newAnimation(modelName, preferences)
     local interface = {
         keyframes = preferences.keyframes or {},
         parameters = preferences.parameter or {},
+        tags = tags or {},
         playbackTime = 0,
         speedMultiplier = preferences.speedMultiplier or 1,
         blendMultiplier = preferences.blendMultiplier or 1,
@@ -311,7 +312,7 @@ function newAnimationAPI:newAnimation(modelName, preferences)
 
         events.render:register(renderFunction, "Reanimated." .. name)
         playState = "PLAYING"
-        interface.time = -interface.startDelayValue
+        interface.playbackTime = -interface.startDelayValue
         initialParameters = tableDeepCopy(interface.parameters)
 
         return self -- Returns self for chaining
@@ -402,171 +403,6 @@ function newAnimationAPI:newAnimation(modelName, preferences)
     -- Checks if this animation is holding on its last frame
     function interface:isHolding() return playState == "HOLDING" end
 
-
-
-    -- Sets the animation's playback speed
-    --
-    -- Negative numbers can be used for an inverted animation
-    --
-    -- Default speed is 1, 2 is twice the speed, and 0.5 is half the speed
-    function legacyStuff:setSpeed(speed) -- Legacy
-        assert(type(speed) == "number" or not speed, "Invalid argument to function setSpeed. Expected number or nil, but got " .. type(speed))
-
-        interface.speedMultiplier = speed or 1
-        return interface
-    end
-    function legacyStuff:speed(speed) return legacyStuff:setSpeed(speed) end -- Alias.. Also legacy
-
-    -- Gets the animation's speed
-    function legacyStuff:getSpeed() return interface.speedMultiplier end -- Legacy
-
-    -- Set the animation's length, in seconds
-    function legacyStuff:setLength(length) -- Legacy
-        assert(type(length) == "number" or not length, "Invalid argument to function setLength. Expected number or nil, but got " .. type(length))
-
-        interface.maxLength = length or preferences.maxLength
-        return interface
-    end
-    function legacyStuff:length(length) return legacyStuff:setLength(length) end -- Alias.. Also legacy
-
-    -- Gets the animation's length, in seconds
-    function legacyStuff:getLength() return interface.maxLength end -- Legacy
-
-    -- Sets the animation's priority
-    --
-    -- Instead of blending, low priority animations are overridden by high priority ones
-    --
-    -- The default priority of animations is 0
-    function legacyStuff:setPriority(priority) -- Legacy
-        assert(type(priority) == "number" or not priority, "Invalid argument to function setPriority. Expected number or nil, but got " .. type(priority))
-
-        interface.priorityValue = priority or preferences.priority
-        return interface
-    end
-    function legacyStuff:priority(priority) return legacyStuff:setPriority(priority) end -- Alias.. Also legacy
-
-    -- Gets the animation's priority
-    function legacyStuff:getPriority() return interface.priorityValue end -- Legacy
-
-    -- Sets the animation's playback current time, in seconds
-    function legacyStuff:setTime(time) -- Legacy
-        assert(type(time) == "number" or not time, "Invalid argument to function setTime. Expected number or nil, but got " .. type(time))
-
-        interface.playbackTime = time or 0
-        return interface
-    end
-    function legacyStuff:time(time) return legacyStuff:setTime(time) end -- Alias.. Also legacy
-
-    -- Get the animation's playback current time, in seconds
-    function legacyStuff:getTime() return interface.playbackTime end -- Legacy
-
-    -- Sets how much time to skip for the animation, in seconds
-    --
-    -- The time is skipped on every loop
-    function legacyStuff:setOffset(offset) -- Legacy
-        assert(type(offset) == "number" or not offset, "Invalid argument to function setOffset. Expected number or nil, but got " .. type(offset))
-
-        interface.startOffset = offset or 0
-        return interface
-    end
-    function legacyStuff:offset(offset) return legacyStuff:setOffset(offset) end -- Alias.. Also legacy
-
-    -- Gets the animation's offset time, in seconds
-    function interface:getOffset() return interface.startOffset end -- Legacy
-
-    -- Sets the animation's loop mode
-    function legacyStuff:setLoop(loop) -- Alias
-        assert(loop, "setLoop 1 do not allow nil values, expected String")
-        assert(type(loop) == "string", "Invalid argument to function setLoop. Expected String, but got " .. type(loop))
-        assert(loopModes[string.upper(loop)], "Illegal LoopMode: \"" .. loop .. "\".")
-
-        interface.loopMode = string.upper(loop)
-        return interface
-    end
-    function legacyStuff:loop(loop) return legacyStuff:setLoop(loop) end -- Alias.. Also legacy
-
-    -- Gets the animation's loop mode
-    function legacyStuff:getLoop() return interface.loopMode end -- Legacy
-
-    -- Sets the animation's keyframe blend factor, which is the strength of the animation
-    function legacyStuff:setBlend(blend) -- Legacy
-        assert(type(blend) == "number" or not blend, "Invalid argument to function setBlend. Expected number or nil, but got " .. type(blend))
-
-        interface.blendMultiplier = blend or 1
-        return interface
-    end
-    function legacyStuff:blend(blend) return legacyStuff:setBlend(blend) end -- Alias.. Also legacy
-
-    function legacyStuff:getBlend() return interface.blendMultiplier end -- Legacy
-
-    -- Set how much time to wait before this animation is initialized, in seconds
-    --
-    -- Note that while it is waiting, the animation is considered being played
-    function legacyStuff:setStartDelay(delay) -- Legacy
-        assert(type(delay) == "number" or not delay, "Invalid argument to function setStartDelay. Expected number or nil, but got " .. type(delay))
-
-        interface.startDelayValue = delay or 0
-        return interface
-    end
-    function legacyStuff:startDelay(delay) return legacyStuff:setStartDelay(delay) end -- Alias.. Also legacy
-
-    -- Gets the animation's start delay, in seconds
-    function legacyStuff:getStartDelay() return interface.startDelayValue end -- Legacy
-
-    -- Set how much time to wait in between the loops of this animation, in seconds
-    function legacyStuff:setLoopDelay(delay) -- Legacy
-        assert(type(delay) == "number" or not delay, "Invalid argument to function setLoopDelay. Expected number or nil, but got " .. type(delay))
-
-        interface.loopDelayValue = delay
-        return interface
-    end
-    function legacyStuff:loopDelay(delay) return legacyStuff:setLoopDelay(delay) end -- Alias.. Also legacy
-
-    -- Gets the animation's loop delay, in seconds
-    function legacyStuff:getLoopDelay() return interface.loopDelayValue end -- Legacy
-
-    -- Set if this animation should override its parts vanilla rotation
-    function legacyStuff:setOverrideRot(override) -- Legacy
-        interface.isOverridingRotations = override or preferences.isOverridingVanillaTransformations
-        return interface
-    end
-    function legacyStuff:overrideRot(override) return legacyStuff:setOverrideRot(override) end -- Alias.. Also legacy
-
-    -- Gets if this animation should override its parts vanilla rotation
-    function legacyStuff:getOverrideRot() return interface.isOverridingRotations end -- Legacy
-
-    -- Set if this animation should override its parts vanilla position
-    function legacyStuff:setOverridePos(override) -- Legacy
-        interface.isOverridingPositions = override or preferences.isOverridingVanillaTransformations
-        return interface
-    end
-    function legacyStuff:overridePos(override) return legacyStuff:setOverridePos(override) end -- Alias.. Also legacy
-
-    -- Gets if this animation should override its parts vanilla position
-    function legacyStuff:getOverridePos() return interface.isOverridingPositions end -- Legacy
-
-    -- Set if this animation should override its parts vanilla scale
-    function legacyStuff:setOverrideScale(override) -- Legacy
-        interface.isOverridingScales = override or preferences.isOverridingVanillaTransformations
-        return interface
-    end
-    function legacyStuff:overrideScale(override) return legacyStuff:setOverrideScale(override) end -- Alias.. Also legacy
-
-    -- Gets if this animation should override its parts vanilla scale
-    function legacyStuff:getOverrideScale() return interface.isOverridingScales end -- Legacy
-
-    -- Set if this animation should override all of its parts vanilla transforms
-    --
-    -- Equivalent of calling "overrideRot", "overridePos" and "overrideScale" altogether
-    function legacyStuff:setOverride(override) -- Legacy
-        interface.isOverridingRotations = override or preferences.isOverridingVanillaTransformations
-        interface.isOverridingPositions = override or preferences.isOverridingVanillaTransformations
-        interface.isOverridingScales = override or preferences.isOverridingVanillaTransformations
-
-        return interface
-    end
-    function legacyStuff:override(override) return legacyStuff:setOverride(override) end -- Alias.. Also legacy
-
     -- Adds a string to run in a determinant time
     --
     -- If there's already code to run at that time, it is overwritten
@@ -580,6 +416,171 @@ function newAnimationAPI:newAnimation(modelName, preferences)
 
 
 
+    -- Sets the animation's playback speed
+    --
+    -- Negative numbers can be used for an inverted animation
+    --
+    -- Default speed is 1, 2 is twice the speed, and 0.5 is half the speed
+    function legacyStuff:setSpeed(speed)
+        assert(type(speed) == "number" or not speed, "Invalid argument to function setSpeed. Expected number or nil, but got " .. type(speed))
+
+        interface.speedMultiplier = speed or 1
+        return interface
+    end
+    function legacyStuff:speed(speed) return legacyStuff:setSpeed(speed) end -- Alias
+
+    -- Gets the animation's speed
+    function legacyStuff:getSpeed() return interface.speedMultiplier end -- Legacy
+
+    -- Set the animation's length, in seconds
+    function legacyStuff:setLength(length)
+        assert(type(length) == "number" or not length, "Invalid argument to function setLength. Expected number or nil, but got " .. type(length))
+
+        interface.maxLength = length or preferences.maxLength
+        return interface
+    end
+    function legacyStuff:length(length) return legacyStuff:setLength(length) end -- Alias
+
+    -- Gets the animation's length, in seconds
+    function legacyStuff:getLength() return interface.maxLength end
+
+    -- Sets the animation's priority
+    --
+    -- Instead of blending, low priority animations are overridden by high priority ones
+    --
+    -- The default priority of animations is 0
+    function legacyStuff:setPriority(priority)
+        assert(type(priority) == "number" or not priority, "Invalid argument to function setPriority. Expected number or nil, but got " .. type(priority))
+
+        interface.priorityValue = priority or preferences.priority
+        return interface
+    end
+    function legacyStuff:priority(priority) return legacyStuff:setPriority(priority) end -- Alias
+
+    -- Gets the animation's priority
+    function legacyStuff:getPriority() return interface.priorityValue end
+
+    -- Sets the animation's playback current time, in seconds
+    function legacyStuff:setTime(time)
+        assert(type(time) == "number" or not time, "Invalid argument to function setTime. Expected number or nil, but got " .. type(time))
+
+        interface.playbackTime = time or 0
+        return interface
+    end
+    function legacyStuff:time(time) return legacyStuff:setTime(time) end -- Alias
+
+    -- Get the animation's playback current time, in seconds
+    function legacyStuff:getTime() return interface.playbackTime end
+
+    -- Sets how much time to skip for the animation, in seconds
+    --
+    -- The time is skipped on every loop
+    function legacyStuff:setOffset(offset)
+        assert(type(offset) == "number" or not offset, "Invalid argument to function setOffset. Expected number or nil, but got " .. type(offset))
+
+        interface.startOffset = offset or 0
+        return interface
+    end
+    function legacyStuff:offset(offset) return legacyStuff:setOffset(offset) end -- Alias
+
+    -- Gets the animation's offset time, in seconds
+    function interface:getOffset() return interface.startOffset end
+
+    -- Sets the animation's loop mode
+    function legacyStuff:setLoop(loop)
+        assert(loop, "setLoop 1 do not allow nil values, expected String")
+        assert(type(loop) == "string", "Invalid argument to function setLoop. Expected String, but got " .. type(loop))
+        assert(loopModes[string.upper(loop)], "Illegal LoopMode: \"" .. loop .. "\".")
+
+        interface.loopMode = string.upper(loop)
+        return interface
+    end
+    function legacyStuff:loop(loop) return legacyStuff:setLoop(loop) end -- Alias
+
+    -- Gets the animation's loop mode
+    function legacyStuff:getLoop() return interface.loopMode end
+
+    -- Sets the animation's keyframe blend factor, which is the strength of the animation
+    function legacyStuff:setBlend(blend)
+        assert(type(blend) == "number" or not blend, "Invalid argument to function setBlend. Expected number or nil, but got " .. type(blend))
+
+        interface.blendMultiplier = blend or 1
+        return interface
+    end
+    function legacyStuff:blend(blend) return legacyStuff:setBlend(blend) end -- Alias
+
+    function legacyStuff:getBlend() return interface.blendMultiplier end
+
+    -- Set how much time to wait before this animation is initialized, in seconds
+    --
+    -- Note that while it is waiting, the animation is considered being played
+    function legacyStuff:setStartDelay(delay)
+        assert(type(delay) == "number" or not delay, "Invalid argument to function setStartDelay. Expected number or nil, but got " .. type(delay))
+
+        interface.startDelayValue = delay or 0
+        return interface
+    end
+    function legacyStuff:startDelay(delay) return legacyStuff:setStartDelay(delay) end -- Alias
+
+    -- Gets the animation's start delay, in seconds
+    function legacyStuff:getStartDelay() return interface.startDelayValue end
+
+    -- Set how much time to wait in between the loops of this animation, in seconds
+    function legacyStuff:setLoopDelay(delay)
+        assert(type(delay) == "number" or not delay, "Invalid argument to function setLoopDelay. Expected number or nil, but got " .. type(delay))
+
+        interface.loopDelayValue = delay
+        return interface
+    end
+    function legacyStuff:loopDelay(delay) return legacyStuff:setLoopDelay(delay) end -- Alias
+
+    -- Gets the animation's loop delay, in seconds
+    function legacyStuff:getLoopDelay() return interface.loopDelayValue end
+
+    -- Set if this animation should override its parts vanilla rotation
+    function legacyStuff:setOverrideRot(override)
+        interface.isOverridingRotations = override or preferences.isOverridingVanillaTransformations
+        return interface
+    end
+    function legacyStuff:overrideRot(override) return legacyStuff:setOverrideRot(override) end -- Alias
+
+    -- Gets if this animation should override its parts vanilla rotation
+    function legacyStuff:getOverrideRot() return interface.isOverridingRotations end
+
+    -- Set if this animation should override its parts vanilla position
+    function legacyStuff:setOverridePos(override)
+        interface.isOverridingPositions = override or preferences.isOverridingVanillaTransformations
+        return interface
+    end
+    function legacyStuff:overridePos(override) return legacyStuff:setOverridePos(override) end -- Alias
+
+    -- Gets if this animation should override its parts vanilla position
+    function legacyStuff:getOverridePos() return interface.isOverridingPositions end
+
+    -- Set if this animation should override its parts vanilla scale
+    function legacyStuff:setOverrideScale(override)
+        interface.isOverridingScales = override or preferences.isOverridingVanillaTransformations
+        return interface
+    end
+    function legacyStuff:overrideScale(override) return legacyStuff:setOverrideScale(override) end -- Alias
+
+    -- Gets if this animation should override its parts vanilla scale
+    function legacyStuff:getOverrideScale() return interface.isOverridingScales end
+
+    -- Set if this animation should override all of its parts vanilla transforms
+    --
+    -- Equivalent of calling "overrideRot", "overridePos" and "overrideScale" altogether
+    function legacyStuff:setOverride(override)
+        interface.isOverridingRotations = override or preferences.isOverridingVanillaTransformations
+        interface.isOverridingPositions = override or preferences.isOverridingVanillaTransformations
+        interface.isOverridingScales = override or preferences.isOverridingVanillaTransformations
+
+        return interface
+    end
+    function legacyStuff:override(override) return legacyStuff:setOverride(override) end -- Alias
+
+
+
     -- Listing and return
     interface = setmetatable(interface, {
         __index = function(_, key) return aliasMethods[key] or legacyStuff[key] end,
@@ -589,6 +590,48 @@ function newAnimationAPI:newAnimation(modelName, preferences)
 
     return interface
 end
+
+-- A function that searches for animations by tags
+function newAnimationAPI.tags:searchFor(tags)
+    -- Assertation
+    assert(type(tags) == "string" or type(tags) == "table", "Invalid tags list. Expected String or table, but got " .. type(tags))
+    if type(tags) == "string" then tags = {tags} end
+
+    -- Looks for animations that have at least one tag from the tags table
+    local foundAnimations = {}
+    for animGroupName, animGroup in pairs(animationsList) do
+        local numberOfFound = 0
+        foundAnimations[animGroupName] = {}
+
+        for animName, animation in pairs(animGroup) do
+            for _, tag in ipairs(tags) do
+                if animation.tags[tag] then
+                    foundAnimations[animGroupName][animName] = animation
+                    numberOfFound = numberOfFound + 1
+                    break
+                end
+            end
+        end
+
+        if numberOfFound == 0 then foundAnimations[animGroupName] = nil end
+    end
+
+    -- Returns found animations
+    return foundAnimations
+end
+
+-- Calls animation methods found through tags
+newAnimationAPI.tags = setmetatable(newAnimationAPI.tags, {
+    __index = function(_, methodName)
+        return function(self, tags)
+            for _, animationGroup in pairs(newAnimationAPI.tags:searchFor(tags)) do
+                for _, animation in pairs(animationGroup) do animation[methodName](animation) end
+            end
+
+            return self
+        end
+    end
+})
 
 
 
@@ -636,7 +679,7 @@ for APIIndex, animationData in ipairs(avatar:getNBT().animations) do
 end
 
 -- Beautifying keyframes and keyframe data
-for _, animationData in ipairs(animationsData) do
+for _, animationData in pairs(animationsData) do
     for _, keyframeTypes in pairs(animationData) do
         for keyframeType, keyframes in pairs(keyframeTypes) do
             local newKeyframes = {}
@@ -700,6 +743,9 @@ for APIIndex, animationNBT in pairs(avatar:getNBT().animations) do
         startOffset = animationNBT.off,
         startDelay = animationNBT.sdel,
         loopDelay = animationNBT.ldel
+    }, {
+        blockbenchAnimation = true,
+        [animationNBT.mdl] = true
     })
 
     if animationsData[APIIndex - 1] then
