@@ -35,7 +35,7 @@ local apiCustoms = {}
 function apiMetatable:__index(key) return apiCustoms[key] or apiOriginalIndexMethod(self, key) end
 --#endregion
 
-function apiCustoms:mergeTextures(changeableTexture, changingTexture, mergedTextureName)
+function apiCustoms:mergeTextures(changeableTexture, changingTexture, mergedTextureName, blendingFactor)
     -- Assertation
     assert(type(changeableTexture) == "Texture", "Invalid argument 1 to function mergeTextures. Expected Texture, but got " .. type(changeableTexture))
     assert(type(changingTexture) == "Texture", "Invalid argument 2 to function mergeTextures. Expected Texture or Table, but got " .. type(changingTexture))
@@ -48,12 +48,13 @@ function apiCustoms:mergeTextures(changeableTexture, changingTexture, mergedText
 
     -- A function that merges pixel colors
     local function mergeFunction(changablePixelColor, changablePixelX, changablePixelY)
+        local alpha = math.clamp(changingPixelColor[4] * blendingFactor, 0, 1)
         local changingPixelColor = changingTexture:getPixel(changablePixelX, changablePixelY)
         return vec(
-            math.clamp(changingPixelColor[1] * changingPixelColor[4] + changablePixelColor[1] * (1 - changingPixelColor[4]), 0, 1),
-            math.clamp(changingPixelColor[2] * changingPixelColor[4] + changablePixelColor[2] * (1 - changingPixelColor[4]), 0, 1),
-            math.clamp(changingPixelColor[3] * changingPixelColor[4] + changablePixelColor[3] * (1 - changingPixelColor[4]), 0, 1),
-            math.clamp(changingPixelColor[4] + changablePixelColor[4] * (1 - changingPixelColor[4]), 0, 1)
+            math.clamp(changingPixelColor[1] * alpha + changablePixelColor[1] * (1 - alpha), 0, 1),
+            math.clamp(changingPixelColor[2] * alpha + changablePixelColor[2] * (1 - alpha), 0, 1),
+            math.clamp(changingPixelColor[3] * alpha + changablePixelColor[3] * (1 - alpha), 0, 1),
+            math.clamp(alpha + changablePixelColor[4] * (1 - alpha), 0, 1)
         )
     end
 
