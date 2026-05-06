@@ -1,7 +1,7 @@
 --[[
     ■■■■■ TextureMerger
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/TextureMerger
-    ■■■■  v1.0.0
+    ■■■■  v1.1.1
 
 MIT License
 
@@ -40,6 +40,7 @@ function apiCustoms:mergeTextures(changeableTexture, changingTexture, mergedText
     assert(type(changeableTexture) == "Texture", "Invalid argument 1 to function mergeTextures. Expected Texture, but got " .. type(changeableTexture))
     assert(type(changingTexture) == "Texture", "Invalid argument 2 to function mergeTextures. Expected Texture or Table, but got " .. type(changingTexture))
     assert(type(mergedTextureName) == "string" or not mergedTextureName, "Invalid argument 3 to function mergeTextures. Expected string or nil, but got " .. type(mergedTextureName))
+    assert(type(blendingFactor) == "number" or not blendingFactor, "Invalid argument 4 to function mergeTextures. Expected number or nil, but got " .. type(blendingFactor))
 
     -- Some locals
     local mergedTexture = textures:copy(mergedTextureName or "merged." .. client:intUUIDToString(client:generateUUID()):sub(1, 8), changeableTexture)
