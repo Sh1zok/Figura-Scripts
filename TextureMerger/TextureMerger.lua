@@ -1,7 +1,7 @@
 --[[
     ■■■■■ TextureMerger
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/TextureMerger
-    ■■■■  v1.1.1
+    ■■■■  v1.1.2
 
 MIT License
 
@@ -49,7 +49,7 @@ function apiCustoms:mergeTextures(changeableTexture, changingTexture, mergedText
 
     -- A function that merges pixel colors
     local function mergeFunction(changablePixelColor, changablePixelX, changablePixelY)
-        local alpha = math.clamp(changingPixelColor[4] * blendingFactor, 0, 1)
+        local alpha = math.clamp(changingPixelColor[4] * (blendingFactor or 1), 0, 1)
         local changingPixelColor = changingTexture:getPixel(changablePixelX, changablePixelY)
         return vec(
             math.clamp(changingPixelColor[1] * alpha + changablePixelColor[1] * (1 - alpha), 0, 1),
