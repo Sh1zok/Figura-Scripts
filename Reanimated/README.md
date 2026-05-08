@@ -49,7 +49,7 @@ In addition, the script adds other functionality related to animations.
 > But I don't know for sure. I haven't run any compatibility tests yet.
 
 ## TO-DO List
-- [ ] Intro and Outro
-- [ ] Smoooth and controllable blending between animations
+- [X] Intro and Outro
+- [X] ~~Smoooth~~ and controllable blending between animations
 - [ ] Opacity animation keyframes
 - [ ] Color animation keyframes
