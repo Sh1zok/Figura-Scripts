@@ -1,7 +1,7 @@
 --[[
     ■■■■■ Reanimated
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/Reanimated
-    ■■■■  v0.3.1
+    ■■■■  v0.4.0
 
 MIT License
 
@@ -55,12 +55,13 @@ local function getKeyframes(keyframes, time, maxTime)
             previousKeyframe = {data = keyframes[thisKeyframeTime], time = thisKeyframeTime}
             if not keyframeTimings[keyframeIndex - 1] then previousKeyframe.time = 0 end
 
-            -- Find the current keyframe. If there is no previous keyframe and the animation playback time has not yet reached the current keyframe,
-            -- then adjust the current keyframe's time to match the animation playback time. This is necessary to prevent interpolation issues
-            -- when there is no keyframe with a timestamp of zero
+            -- Find the current keyframe. If there is no previous keyframe(or if there is no target keyframe) and the animation playback time has not yet reached the current keyframe
+            -- (or the animation playback time has overreached the current keyframe), then adjust the current keyframe's time to match the animation playback time. This is necessary
+            -- to prevent interpolation issues when there is no keyframe with a timestamp of zero(or when there is no keyframe with a timestamp of animation length time)
             thisKeyframeTime = keyframeTimings[keyframeIndex]
             currentKeyframe = {data = keyframes[thisKeyframeTime], time = thisKeyframeTime}
             if time < thisKeyframeTime and not keyframeTimings[keyframeIndex - 1] then currentKeyframe.time = time end
+            if time > thisKeyframeTime and not keyframeTimings[keyframeIndex + 1] then currentKeyframe.time = time end
 
             -- Find the target keyframe. If it doesn't exist, take the current keyframe and set the animation length as the timestamp
             thisKeyframeTime = keyframeTimings[keyframeIndex + 1] or keyframeTimings[keyframeIndex]
@@ -204,7 +205,11 @@ function newAnimationAPI:newAnimation(modelName, preferences, tags)
         priorityValue = preferences.priority or 0,
         isOverridingRotations = preferences.isOverridingVanillaTransformations or false,
         isOverridingPositions = preferences.isOverridingVanillaTransformations or false,
-        isOverridingScales = preferences.isOverridingVanillaTransformations or false
+        isOverridingScales = preferences.isOverridingVanillaTransformations or false,
+        introLength = preferences.introLength or (-1 / 0),
+        outroLength = preferences.outroLength or (-1 / 0),
+        blendInLength = (-1 / 0),
+        blendOutLength = (-1 / 0)
     }
     local name = preferences.name
     local playState = "STOPPED"
@@ -228,6 +233,12 @@ function newAnimationAPI:newAnimation(modelName, preferences, tags)
         local deltaTime = 1 / math.max(client:getFPS(), 1)
         interface.playbackTime = math.max(interface.playbackTime, interface.startOffset) + deltaTime * interface.speedMultiplier
 
+        -- Checking if the intro has been passed
+        if interface.playbackTime >= interface.introLength and playState == "INTRO" then playState = "PLAYING" end
+
+        -- Checking is the outro has been reached
+        if interface.playbackTime >= interface.maxLength - interface.outroLength and playState == "OUTRO" then playState = "OUTRO" end
+
         -- Checking is the end of an animation has been reached
         local isEndReached = interface.playbackTime >= interface.maxLength
 
@@ -241,6 +252,7 @@ function newAnimationAPI:newAnimation(modelName, preferences, tags)
                     isMerging = not interface.isOverridingRotations,
                     vector = interpolateValues(previousKeyframe, currentKeyframe, targetKeyframe, nextTargetKeyframe, interface.playbackTime) * vec(-1, -1, 1) * interface.blendMultiplier
                 }
+                if interface.isOverridingRotations and (playState == "INTRO" or playState == "OUTRO") then modelPartTransforms[modelPart].rotations[interface.priorityValue][interface].isMerging = true end
 
                 modelPart:updateRot()
             end
@@ -252,6 +264,7 @@ function newAnimationAPI:newAnimation(modelName, preferences, tags)
                     isMerging = not interface.isOverridingPositions,
                     vector = interpolateValues(previousKeyframe, currentKeyframe, targetKeyframe, nextTargetKeyframe, interface.playbackTime) * vec(-1, 1, 1) * interface.blendMultiplier
                 }
+                if interface.isOverridingPositions and (playState == "INTRO" or playState == "OUTRO") then modelPartTransforms[modelPart].positions[interface.priorityValue][interface].isMerging = true end
 
                 modelPart:updatePos()
             end
@@ -263,6 +276,7 @@ function newAnimationAPI:newAnimation(modelName, preferences, tags)
                     isMerging = not interface.isOverridingScales,
                     vector = interpolateValues(previousKeyframe, currentKeyframe, targetKeyframe, nextTargetKeyframe, interface.playbackTime) * interface.blendMultiplier
                 }
+                if interface.isOverridingScales and (playState == "INTRO" or playState == "OUTRO") then modelPartTransforms[modelPart].scales[interface.priorityValue][interface].isMerging = true end
 
                 modelPart:updateScale()
             end
@@ -296,13 +310,62 @@ function newAnimationAPI:newAnimation(modelName, preferences, tags)
         end
     end
 
+    local blendAnimation = function(time, isBlendingIn)
+        local currentBlendTime = interface.blendOutLength
+        if isBlendingIn then currentBlendTime = interface.blendInLength end
+
+        local function calculateBlendFactor() return (currentBlendTime / interface.blendOutLength) * interface.blendMultiplier end
+        if isBlendingIn then return (1 - (currentBlendTime / interface.blendOutLength)) * interface.blendMultiplier end
+
+        -- A function that runs every frame when the animation is blendind in or blending out
+        events.render:register(function()
+            local deltaTime = 1 / math.max(client:getFPS(), 1)
+
+            currentBlendTime = currentBlendTime - deltaTime * interface.speedMultiplier
+            interface.playbackTime = interface.playbackTime + deltaTime * interface.speedMultiplier
+
+            local blendFactor = math.clamp(calculateBlendFactor(), 0, interface.blendMultiplier)
+
+            for modelPart, keyframeTypes in pairs(interface.keyframes) do
+                if keyframeTypes.rotation then
+                    local _, keyframe, _, _ = getKeyframes(keyframeTypes.rotation, time, interface.maxLength)
+                    modelPartTransforms[modelPart].rotations[interface.priorityValue][interface] = {isMerging = true, vector = keyframe.data.value * vec(-1, -1, 1) * blendFactor}
+                    modelPart:updateRot()
+                end
+                if keyframeTypes.position then
+                    local _, keyframe, _, _ = getKeyframes(keyframeTypes.position, time, interface.maxLength)
+                    modelPartTransforms[modelPart].positions[interface.priorityValue][interface] = {isMerging = true, vector = keyframe.data.value * vec(-1, 1, 1) * blendFactor}
+                    modelPart:updatePos()
+                end
+                if keyframeTypes.scale then
+                    local _, keyframe, _, _ = getKeyframes(keyframeTypes.scale, time, interface.maxLength)
+                    modelPartTransforms[modelPart].scales[interface.priorityValue][interface] = {isMerging = true, vector = keyframe.data.value * blendFactor}
+                    modelPart:updateScale()
+                end
+            end
+
+            if currentBlendTime <= 0 then
+                events.render:remove("Reanimated." .. name .. ".blend")
+
+                if playState == "INTRO" or playState == "PLAYING" or playState == "OUTRO" then events.render:register(renderFunction, "Reanimated." .. name) end
+                if time == interface.maxLength then
+                    for modelPart in pairs(interface.keyframes) do
+                        modelPartTransforms[modelPart].rotations[interface.priorityValue][interface] = nil; modelPart:updateRot()
+                        modelPartTransforms[modelPart].positions[interface.priorityValue][interface] = nil; modelPart:updatePos()
+                        modelPartTransforms[modelPart].scales[interface.priorityValue][interface] = nil; modelPart:updateScale()
+                    end
+                end
+            end
+        end, "Reanimated." .. name .. ".blend")
+    end
+
 
 
     -- Initializes or resumes the animation
     --
     -- Returns the given animation for chaining
     function interface:play()
-        if playState == "PLAYING" then return self end
+        if playState == "INTRO" or playState == "PLAYING" or playState == "OUTRO" then return self end
 
         for modelPart in pairs(interface.keyframes) do
             if not modelPartTransforms[modelPart].rotations[interface.priorityValue] then modelPartTransforms[modelPart].rotations[interface.priorityValue] = {} end
@@ -310,9 +373,9 @@ function newAnimationAPI:newAnimation(modelName, preferences, tags)
             if not modelPartTransforms[modelPart].scales[interface.priorityValue] then modelPartTransforms[modelPart].scales[interface.priorityValue] = {} end
         end
 
-        events.render:register(renderFunction, "Reanimated." .. name)
-        playState = "PLAYING"
-        interface.playbackTime = -interface.startDelayValue
+        if interface.blendInLength > 0 then blendAnimation(0, true) else events.render:register(renderFunction, "Reanimated." .. name) end
+        playState = "INTRO"
+        interface.playbackTime = -interface.startDelayValue - math.max(interface.blendInLength, 0)
         initialParameters = tableDeepCopy(interface.parameters)
 
         return self -- Returns self for chaining
@@ -325,15 +388,19 @@ function newAnimationAPI:newAnimation(modelName, preferences, tags)
         if playState == "STOPPED" then return self end
 
         events.render:remove("Reanimated." .. name)
+        if interface.blendOutLength > 0 then
+            blendAnimation(interface.maxLength, false)
+        else
+            for modelPart in pairs(interface.keyframes) do
+                modelPartTransforms[modelPart].rotations[interface.priorityValue][interface] = nil; modelPart:updateRot()
+                modelPartTransforms[modelPart].positions[interface.priorityValue][interface] = nil; modelPart:updatePos()
+                modelPartTransforms[modelPart].scales[interface.priorityValue][interface] = nil; modelPart:updateScale()
+            end
+        end
         playState = "STOPPED"
 
         interface.playbackTime = 0
         interface.parameters = tableDeepCopy(initialParameters)
-        for modelPart in pairs(interface.keyframes) do
-            modelPartTransforms[modelPart].rotations[interface.priorityValue][interface] = nil; modelPart:updateRot()
-            modelPartTransforms[modelPart].positions[interface.priorityValue][interface] = nil; modelPart:updatePos()
-            modelPartTransforms[modelPart].scales[interface.priorityValue][interface] = nil; modelPart:updateScale()
-        end
 
         return self -- Returns self for chaining
     end
@@ -358,12 +425,12 @@ function newAnimationAPI:newAnimation(modelName, preferences, tags)
     function interface:restart()
         if playState == "STOPPED" then initialParameters = tableDeepCopy(interface.parameters) end
         interface.playbackTime = 0
-        if playState == "PLAYING" or playState == "HOLDING" then interface.playbackTime = -interface.loopDelayValue end
+        if playState == "PLAYING" or playState == "HOLDING" or playState == "INTRO" or playState == "OUTRO" then interface.playbackTime = -interface.loopDelayValue end
         interface.parameters = tableDeepCopy(initialParameters)
 
         events.render:remove("Reanimated." .. name)
-        events.render:register(renderFunction, "Reanimated." .. name)
-        playState = "PLAYING"
+        if interface.blendInLength > 0 then blendAnimation(0, true) else events.render:register(renderFunction, "Reanimated." .. name) end
+        playState = "INTRO"
 
         for modelPart in pairs(interface.keyframes) do
             if not modelPartTransforms[modelPart].rotations[interface.priorityValue] then modelPartTransforms[modelPart].rotations[interface.priorityValue] = {} end
@@ -392,7 +459,7 @@ function newAnimationAPI:newAnimation(modelName, preferences, tags)
     function interface:getPlayState() return playState end
 
     -- Checks if the animation is playing
-    function interface:isPlaying() return playState == "PLAYING" end
+    function interface:isPlaying() return playState == "PLAYING" or playState == "INTRO" or playState == "OUTRO" end
 
     -- Checks if the animation is stopped
     function interface:isStopped() return playState == "STOPPED" end
