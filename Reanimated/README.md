@@ -54,3 +54,4 @@ In addition, the script adds other functionality related to animations.
 - [ ] Opacity animation keyframes
 - [ ] Color animation keyframes
 - [ ] Animation framerate cap
+- [ ] Legacy support
