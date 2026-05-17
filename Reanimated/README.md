@@ -53,3 +53,4 @@ In addition, the script adds other functionality related to animations.
 - [X] ~~Smoooth~~ and controllable blending between animations
 - [ ] Opacity animation keyframes
 - [ ] Color animation keyframes
+- [ ] Animation framerate cap
