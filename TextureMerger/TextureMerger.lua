@@ -1,7 +1,7 @@
 --[[
     ■■■■■ TextureMerger
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/TextureMerger
-    ■■■■  v1.1.2
+    ■■■■  v1.2.0
 
 MIT License
 
@@ -35,22 +35,20 @@ local apiCustoms = {}
 function apiMetatable:__index(key) return apiCustoms[key] or apiOriginalIndexMethod(self, key) end
 --#endregion
 
-function apiCustoms:mergeTextures(changeableTexture, changingTexture, mergedTextureName, blendingFactor)
+function apiCustoms:mergeTextures(changeableTexture, changingTexture, blendingFactor, doNotUpdate)
     -- Assertation
     assert(type(changeableTexture) == "Texture", "Invalid argument 1 to function mergeTextures. Expected Texture, but got " .. type(changeableTexture))
     assert(type(changingTexture) == "Texture", "Invalid argument 2 to function mergeTextures. Expected Texture or Table, but got " .. type(changingTexture))
-    assert(type(mergedTextureName) == "string" or not mergedTextureName, "Invalid argument 3 to function mergeTextures. Expected string or nil, but got " .. type(mergedTextureName))
-    assert(type(blendingFactor) == "number" or not blendingFactor, "Invalid argument 4 to function mergeTextures. Expected number or nil, but got " .. type(blendingFactor))
+    assert(type(blendingFactor) == "number" or not blendingFactor, "Invalid argument 3 to function mergeTextures. Expected number or nil, but got " .. type(blendingFactor))
 
     -- Some locals
-    local mergedTexture = textures:copy(mergedTextureName or "merged." .. client:intUUIDToString(client:generateUUID()):sub(1, 8), changeableTexture)
     local changeableTextureDimensions, changingTextureDimensions = changeableTexture:getDimensions(), changingTexture:getDimensions()
     local mergeAreaWidth, mergeAriaHeight = math.min(changeableTextureDimensions.x, changingTextureDimensions.x), math.min(changeableTextureDimensions.y, changingTextureDimensions.y)
 
     -- A function that merges pixel colors
     local function mergeFunction(changablePixelColor, changablePixelX, changablePixelY)
-        local alpha = math.clamp(changingPixelColor[4] * (blendingFactor or 1), 0, 1)
         local changingPixelColor = changingTexture:getPixel(changablePixelX, changablePixelY)
+        local alpha = math.clamp(changingPixelColor[4] * (blendingFactor or 1), 0, 1)
         return vec(
             math.clamp(changingPixelColor[1] * alpha + changablePixelColor[1] * (1 - alpha), 0, 1),
             math.clamp(changingPixelColor[2] * alpha + changablePixelColor[2] * (1 - alpha), 0, 1),
@@ -60,5 +58,9 @@ function apiCustoms:mergeTextures(changeableTexture, changingTexture, mergedText
     end
 
     -- Applies merge function to texture and returns the mergedTexture as a result
-    return mergedTexture:applyFunc(0, 0, mergeAreaWidth, mergeAriaHeight, mergeFunction)
+    if not doNotUpdate then
+        return changeableTexture:applyFunc(0, 0, mergeAreaWidth, mergeAriaHeight, mergeFunction):update()
+    else
+        return changeableTexture:applyFunc(0, 0, mergeAreaWidth, mergeAriaHeight, mergeFunction)
+    end
 end
