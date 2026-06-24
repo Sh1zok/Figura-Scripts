@@ -1,7 +1,7 @@
 --[[
     ■■■■■ TextureMerger
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/TextureMerger
-    ■■■■  v1.2.0
+    ■■■■  v1.3.0
 
 MIT License
 
@@ -35,11 +35,18 @@ local apiCustoms = {}
 function apiMetatable:__index(key) return apiCustoms[key] or apiOriginalIndexMethod(self, key) end
 --#endregion
 
-function apiCustoms:mergeTextures(changeableTexture, changingTexture, blendingFactor, doNotUpdate)
+function apiCustoms:mergeTextures(changeableTexture, changingTexture, blendingFactor, doNotUpdate, chromaColor)
     -- Assertation
     assert(type(changeableTexture) == "Texture", "Invalid argument 1 to function mergeTextures. Expected Texture, but got " .. type(changeableTexture))
     assert(type(changingTexture) == "Texture", "Invalid argument 2 to function mergeTextures. Expected Texture or Table, but got " .. type(changingTexture))
     assert(type(blendingFactor) == "number" or not blendingFactor, "Invalid argument 3 to function mergeTextures. Expected number or nil, but got " .. type(blendingFactor))
+    assert(type(chromaColor) == "Vector3" or type(chromaColor) == "string" or not chromaColor, "Invalid argument 5 to function mergeTextures. Expected Vecrot3 or string or nil, but got " .. type(chromaColor))
+
+    -- Parsing chroma color
+    if chromaColor then
+        if type(chromaColor) == "string" then chromaColor = vectors:hexToRGB(chromaColor) end
+        chromaColor = vec(chromaColor[1], chromaColor[2], chromaColor[3], 1)
+    end
 
     -- Some locals
     local changeableTextureDimensions, changingTextureDimensions = changeableTexture:getDimensions(), changingTexture:getDimensions()
@@ -49,6 +56,8 @@ function apiCustoms:mergeTextures(changeableTexture, changingTexture, blendingFa
     local function mergeFunction(changablePixelColor, changablePixelX, changablePixelY)
         local changingPixelColor = changingTexture:getPixel(changablePixelX, changablePixelY)
         local alpha = math.clamp(changingPixelColor[4] * (blendingFactor or 1), 0, 1)
+
+        if changingPixelColor == chromaColor then return vec(0, 0, 0, 0) end
         return vec(
             math.clamp(changingPixelColor[1] * alpha + changablePixelColor[1] * (1 - alpha), 0, 1),
             math.clamp(changingPixelColor[2] * alpha + changablePixelColor[2] * (1 - alpha), 0, 1),
