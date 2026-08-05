@@ -1,7 +1,7 @@
 --[[
     ■■■■■ LooksCrafter
-    ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/LookCrafter
-    ■■■■  v1.0.0
+    ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/LooksCrafter
+    ■■■■  v1.0.1
 
 MIT License
 
