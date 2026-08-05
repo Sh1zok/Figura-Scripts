@@ -1,7 +1,7 @@
 --[[
     ■■■■■ LooksCrafter
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/LooksCrafter
-    ■■■■  v1.1.0
+    ■■■■  v1.1.1
 
 MIT License
 
@@ -180,7 +180,10 @@ function API:newHandler(baseTexture, customConfigName)
         if shouldNotUpdateLook then return self else return self:updateLook() end
     end
 
-    function interface:getItemInSlot(slotName) return slotEquippedItems[slotName] end
+    function interface:getItemInSlot(slotName)
+        assert(type(slotName) == "string", "Invalid argument to function getItemInSlot. Expected string, but got " .. type(slotName))
+        return slotEquippedItems[slotName]
+    end
 
     function interface:getSlots() return tableDeepCopy(slots) end
 
