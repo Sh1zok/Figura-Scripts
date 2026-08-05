@@ -1,7 +1,7 @@
 --[[
     ■■■■■ LooksCrafter
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/LooksCrafter
-    ■■■■  v1.1.2
+    ■■■■  v1.1.3
 
 MIT License
 
@@ -195,8 +195,8 @@ function API:newHandler(baseTexture, customConfigName)
     end
 
     function interface:setMaxParallelSyncs(newSyncMaxIterationsPerSync)
-        assert(type(newSyncMaxIterationsPerSync) == "number", "Invalid argument to function setMaxParallelSyncs. Expected number, but got " .. type(newSyncMaxIterationsPerSync))
-        syncMaxIterationsPerSync = newSyncMaxIterationsPerSync
+        assert(type(newSyncMaxIterationsPerSync) == "number" or not newSyncMaxIterationsPerSync, "Invalid argument to function setMaxParallelSyncs. Expected number or nil, but got " .. type(newSyncMaxIterationsPerSync))
+        syncMaxIterationsPerSync = newSyncMaxIterationsPerSync or 5
 
         return self
     end
