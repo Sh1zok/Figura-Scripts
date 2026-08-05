@@ -1,7 +1,7 @@
 --[[
     ■■■■■ LooksCrafter
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/LooksCrafter
-    ■■■■  v1.1.1
+    ■■■■  v1.1.2
 
 MIT License
 
@@ -188,8 +188,8 @@ function API:newHandler(baseTexture, customConfigName)
     function interface:getSlots() return tableDeepCopy(slots) end
 
     function interface:setSyncCooldown(seconds)
-        assert(type(seconds) == "number", "Invalid argument to function setSyncCooldown. Expected number, but got " .. type(seconds))
-        syncCooldownSeconds = seconds
+        assert(type(seconds) == "number" or not seconds, "Invalid argument to function setSyncCooldown. Expected number or nil, but got " .. type(seconds))
+        syncCooldownSeconds = seconds or 60
 
         return self
     end
