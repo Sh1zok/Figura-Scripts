@@ -1,7 +1,7 @@
 --[[
     ■■■■■ LooksCrafter
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/LooksCrafter
-    ■■■■  v1.1.3
+    ■■■■  v1.4.0
 
 MIT License
 
@@ -171,9 +171,9 @@ function API:newHandler(baseTexture, customConfigName)
         end
 
         local oldItemName
-        if slots[slotName][slotEquippedItems[slotName]].onUnequip and slotEquippedItems[slotName] ~= itemName then slots[slotName][slotEquippedItems[slotName]]:onUnequip() end
+        if slots[slotName][slotEquippedItems[slotName]].onUnequip and slotEquippedItems[slotName] ~= itemName then slots[slotName][slotEquippedItems[slotName]]:onUnequip(self) end
         oldItemName, slotEquippedItems[slotName] = slotEquippedItems[slotName], itemName
-        if slots[slotName][slotEquippedItems[slotName]].onEquip and itemName ~= oldItemName then slots[slotName][slotEquippedItems[slotName]]:onEquip() end
+        if slots[slotName][slotEquippedItems[slotName]].onEquip and itemName ~= oldItemName then slots[slotName][slotEquippedItems[slotName]]:onEquip(self) end
 
         pings.synchronizeSlotItem(baseTexture:getName(), slotName, itemName, true)
 
