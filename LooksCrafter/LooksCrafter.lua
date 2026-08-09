@@ -1,7 +1,7 @@
 --[[
     ■■■■■ LooksCrafter
     ■   ■ Source: https://github.com/Sh1zok/Figura-Scripts/tree/main/LooksCrafter
-    ■■■■  v1.4.1
+    ■■■■  v2.0.0
 
 MIT License
 
@@ -63,11 +63,18 @@ local function mergeTextures(changeableTexture, changingTexture, chromaKeyColor)
     return changeableTexture:applyFunc(0, 0, mergeAreaWidth, mergeAriaHeight, mergeFunction)
 end
 
-function pings.synchronizeSlotItem(textureName, slotName, itemName, shouldUpdateLook)
+function pings.looksCrafterSynchronizeLook(textureName, configuration)
     local textureHandler = handlers[textures[textureName]]
-    if not host:isHost() then textureHandler:setSlot(slotName, itemName, not shouldUpdateLook) end
 
-    if shouldUpdateLook then textureHandler:updateLook() end
+    local slots, slotEquippedItems = textureHandler:getSlots(), textureHandler:getEquippedItems()
+    for slotName, itemName in pairs(configuration) do
+        local oldItemName
+        if slots[slotName][slotEquippedItems[slotName]] and slots[slotName][slotEquippedItems[slotName]].onUnequip and slotEquippedItems[slotName] ~= itemName then slots[slotName][slotEquippedItems[slotName]].onUnequip(textureHandler) end
+        oldItemName, slotEquippedItems[slotName] = slotEquippedItems[slotName], itemName
+        if slots[slotName][slotEquippedItems[slotName]] and slots[slotName][slotEquippedItems[slotName]].onEquip and itemName ~= oldItemName then slots[slotName][slotEquippedItems[slotName]].onEquip(textureHandler) end
+    end
+
+    textureHandler:setEquippedItems(slotEquippedItems)
 end
 
 
@@ -89,8 +96,6 @@ function API:newHandler(baseTexture, customConfigName)
     local slotEquippedItems = {}
 
     local syncCooldownSeconds = 60
-    local syncMaxIterationsPerSync = 5
-
     local configName = customConfigName or avatar:getName() .. "_LooksCrafter_" .. baseTexture:getName()
 
     local interface = {}
@@ -104,7 +109,9 @@ function API:newHandler(baseTexture, customConfigName)
 
         for _, slotName in pairs(slotPriorities) do
             if slotEquippedItems[slotName] then
-                mergeTextures(baseTexture, slots[slotName][slotEquippedItems[slotName]].texture, slots[slotName][slotEquippedItems[slotName]].chromaKeyColor)
+                if slots[slotName][slotEquippedItems[slotName]].texture then
+                    mergeTextures(baseTexture, slots[slotName][slotEquippedItems[slotName]].texture, slots[slotName][slotEquippedItems[slotName]].chromaKeyColor)
+                end
 
                 if slots[slotName][slotEquippedItems[slotName]].modelParts then
                     for modelPart, visibilityState in pairs(slots[slotName][slotEquippedItems[slotName]].modelParts) do
@@ -147,11 +154,12 @@ function API:newHandler(baseTexture, customConfigName)
         if config:load(name) and not items[config:load(name)] then config:save(name, nil) end
 
         -- Equips first item from table to prevent nudity
-        slotEquippedItems[name] = config:load(name) or defaultItemName
+        slotEquippedItems[name] = defaultItemName
+        if config:load(name) ~= nil then slotEquippedItems[name] = config:load(name) end
         -- Since `false` indicates that there is no item in the slot, we set the default value only if the value is EXACTLY `nil`
         if slotEquippedItems[name] == nil then pairs(items)(items) end
 
-        if not config:load(name) then config:save(name, slotEquippedItems[name]) end
+        if config:load(name) == nil then config:save(name, slotEquippedItems[name]) end
         config:setName(oldConfigName)
 
         return self:updateLook()
@@ -171,11 +179,9 @@ function API:newHandler(baseTexture, customConfigName)
         end
 
         local oldItemName
-        if slots[slotName][slotEquippedItems[slotName]].onUnequip and slotEquippedItems[slotName] ~= itemName then slots[slotName][slotEquippedItems[slotName]].onUnequip(self) end
+        if slots[slotName][slotEquippedItems[slotName]] and slots[slotName][slotEquippedItems[slotName]].onUnequip and slotEquippedItems[slotName] ~= itemName then slots[slotName][slotEquippedItems[slotName]].onUnequip(self) end
         oldItemName, slotEquippedItems[slotName] = slotEquippedItems[slotName], itemName
-        if slots[slotName][slotEquippedItems[slotName]].onEquip and itemName ~= oldItemName then slots[slotName][slotEquippedItems[slotName]].onEquip(self) end
-
-        pings.synchronizeSlotItem(baseTexture:getName(), slotName, itemName, true)
+        if slots[slotName][slotEquippedItems[slotName]] and slots[slotName][slotEquippedItems[slotName]].onEquip and itemName ~= oldItemName then slots[slotName][slotEquippedItems[slotName]].onEquip(self) end
 
         if shouldNotUpdateLook then return self else return self:updateLook() end
     end
@@ -194,41 +200,27 @@ function API:newHandler(baseTexture, customConfigName)
         return self
     end
 
-    function interface:setMaxParallelSyncs(newSyncMaxIterationsPerSync)
-        assert(type(newSyncMaxIterationsPerSync) == "number" or not newSyncMaxIterationsPerSync, "Invalid argument to function setMaxParallelSyncs. Expected number or nil, but got " .. type(newSyncMaxIterationsPerSync))
-        syncMaxIterationsPerSync = newSyncMaxIterationsPerSync or 5
+    function interface:setEquippedItems(newEquippedItems)
+        assert(type(newEquippedItems) == "table", "Invalid argument to function setEquippedItems. Expected table, but got " .. type(newEquippedItems))
+        slotEquippedItems = newEquippedItems
 
-        return self
+        return self:updateLook()
     end
+
+    function interface:getEquippedItems() return tableDeepCopy(slotEquippedItems) end
 
 
 
     if host:isHost() then
-        local syncedSlotNames = {}
         local ticksSinceLastSync = (syncCooldownSeconds * 0.9) * 20
-        local syncIterationIndex = 1
         events.tick:register(function()
             if ticksSinceLastSync / 20 >= syncCooldownSeconds then
                 local oldConfigName = config:getName()
                 config:setName(configName)
-                local configContent = config:load()
+
+                pings.looksCrafterSynchronizeLook(baseTexture:getName(), config:load())
+
                 config:setName(oldConfigName)
-
-                for slotName in pairs(slots) do
-                    if not syncedSlotNames[slotName] then
-                        pings.synchronizeSlotItem(baseTexture:getName(), slotName, configContent[slotName], syncIterationIndex > syncMaxIterationsPerSync or #syncedSlotNames >= #slots)
-
-                        syncIterationIndex = syncIterationIndex + 1
-                        syncedSlotNames[slotName] = true
-                    end
-
-                    if syncIterationIndex > syncMaxIterationsPerSync or #syncedSlotNames >= #slots then
-                        syncIterationIndex = 1
-                        syncedSlotNames = {}
-                        break
-                    end
-                end
-
                 ticksSinceLastSync = -1
             end
 

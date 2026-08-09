@@ -14,7 +14,6 @@ In addition to basic texture layering, this script provides the following featur
 * **Model parts control** - You can specify which model parts will be specifically shown or hidden. This allows you to complement your outfits with 3D elements and accessories.
 * **`:onEquip()` & `:onUnequip()`** - If equipping or unequipping any piece of clothing needs a function to be executed, this can be specified.
 * **Session-through config** - Automatic saving and loading of selected clothing items between game sessions.
-* **Pings** - The pings are already embedded.
 ***
 ## Documentation
 Use the script [documentation](https://github.com/Sh1zok/Figura-Scripts/wiki/%5BLooksCrafter%5D-Home) to start working with the script.
